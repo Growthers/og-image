@@ -11,17 +11,36 @@ const rglr = readFileSync(`${__dirname}/../_fonts/Inter-Regular.woff2`).toString
 const bold = readFileSync(`${__dirname}/../_fonts/Inter-Bold.woff2`).toString('base64');
 const mono = readFileSync(`${__dirname}/../_fonts/Vera-Mono.woff2`).toString('base64');
 
-function getCss(theme: string, fontSize: string) {
-    let background = 'white';
-    let foreground = 'black';
-    let radial = 'lightgray';
+function getCss(theme: string, fontSize: string, background: string) {
+    let background_color = '';
+    let background_image = '';
+    let foreground = '';
 
-    if (theme === 'dark') {
-        background = 'black';
-        foreground = 'white';
-        radial = 'dimgray';
+    if (theme === 'light') {
+        background_color = '#ffffff';
+        foreground = '#000000';
+    } else {
+        background_color = '#000000';
+        foreground = '#ffffff';
     }
+
+    switch (background) {
+        case 'blog':
+            // devブランチの画像
+            background_image = 'https://raw.githubusercontent.com/Undecided-Discord/og-image/dev/public/img/blog.png';
+            background_color = '';
+            foreground = '#ffffff';
+            break;
+        default:
+            background_image = '';
+            break;
+    }
+
     return `
+    @import url("https://cdn.jsdelivr.net/npm/yakuhanjp@3.3.1/dist/css/yakuhanjp.min.css");
+    @import url("https://fonts.googleapis.com/css2?family=Roboto&display=swap");
+    @import url("https://fonts.googleapis.com/css?family=Noto+Sans+JP&display=swap");
+
     @font-face {
         font-family: 'Inter';
         font-style:  normal;
@@ -40,13 +59,19 @@ function getCss(theme: string, fontSize: string) {
         font-family: 'Vera';
         font-style: normal;
         font-weight: normal;
-        src: url(data:font/woff2;charset=utf-8;base64,${mono})  format("woff2");
-      }
+        src: url(data:font/woff2;charset=utf-8;base64,${mono}) format("woff2");
+    }
 
     body {
-        background: ${background};
-        background-image: radial-gradient(circle at 25px 25px, ${radial} 2%, transparent 0%), radial-gradient(circle at 75px 75px, ${radial} 2%, transparent 0%);
-        background-size: 100px 100px;
+        ${
+            background === '' ? `
+            background-color: ${background_color};
+            ` : `
+            background-image: url(${background_image});
+            background-position: center;
+            `
+        }
+        background-size: 100%;
         height: 100vh;
         display: flex;
         text-align: center;
@@ -65,26 +90,8 @@ function getCss(theme: string, fontSize: string) {
         content: '\`';
     }
 
-    .logo-wrapper {
-        display: flex;
-        align-items: center;
-        align-content: center;
-        justify-content: center;
-        justify-items: center;
-    }
-
-    .logo {
-        margin: 0 75px;
-    }
-
-    .plus {
-        color: #BBB;
-        font-family: Times New Roman, Verdana;
-        font-size: 100px;
-    }
-
-    .spacer {
-        margin: 150px;
+    .text {
+        font-family: 'YakuHanJP', 'Roboto', 'Noto Sans JP', 'Inter', sans-serif;
     }
 
     .emoji {
@@ -93,54 +100,47 @@ function getCss(theme: string, fontSize: string) {
         margin: 0 .05em 0 .1em;
         vertical-align: -0.1em;
     }
-    
+
     .heading {
-        font-family: 'Inter', sans-serif;
         font-size: ${sanitizeHtml(fontSize)};
         font-style: normal;
         color: ${foreground};
         line-height: 1.8;
+        width: 80vw;
+        overflow-wrap: break-word;
+    }
+
+    .blog_author {
+        font-size: calc(${sanitizeHtml(fontSize)} * 0.8);
+        font-style: normal;
+        color: ${foreground};
+
+        position: absolute;
+        top: calc(955px - (${sanitizeHtml(fontSize)} * 0.8));
+        left: 150px;
     }`;
 }
 
 export function getHtml(parsedReq: ParsedRequest) {
-    const { text, theme, md, fontSize, images, widths, heights } = parsedReq;
+    const { text, theme, md, fontSize, background, blog_author } = parsedReq;
     return `<!DOCTYPE html>
 <html>
     <meta charset="utf-8">
     <title>Generated Image</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
-        ${getCss(theme, fontSize)}
+        ${getCss(theme, fontSize, background)}
     </style>
     <body>
-        <div>
-            <div class="spacer">
-            <div class="logo-wrapper">
-                ${images.map((img, i) =>
-                    getPlusSign(i) + getImage(img, widths[i], heights[i])
-                ).join('')}
-            </div>
-            <div class="spacer">
+        <div class="text">
             <div class="heading">${emojify(
                 md ? marked(text) : sanitizeHtml(text)
             )}
             </div>
+            <div class="blog_author">
+                ${blog_author}
+            </div>
         </div>
     </body>
 </html>`;
-}
-
-function getImage(src: string, width ='auto', height = '225') {
-    return `<img
-        class="logo"
-        alt="Generated Image"
-        src="${sanitizeHtml(src)}"
-        width="${sanitizeHtml(width)}"
-        height="${sanitizeHtml(height)}"
-    />`
-}
-
-function getPlusSign(i: number) {
-    return i === 0 ? '' : '<div class="plus">+</div>';
 }
